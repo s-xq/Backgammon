@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name = "GameView">
+        <attr name = "line_width" format="dimension"/>
+        <attr name = "line_color" format="color"/>
+        <attr name = "cloumn" format="integer"/>
+        <attr name = "row" format="integer"/>
+        <attr name = "radius_percent" format="fraction"/>
+        <attr name="board_background" format="reference"/>
+        <attr name = "board_padding" format="dimension"/>
+        <attr name = "chess_center_color" format = "color"/>
+    </declare-styleable>
+
+</resources>
