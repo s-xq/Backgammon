@@ -5,7 +5,10 @@
         <attr name = "line_color" format="color"/>
         <attr name = "cloumn" format="integer"/>
         <attr name = "row" format="integer"/>
+        <!--棋子半径长度占方格边长的百分比-->
         <attr name = "radius_percent" format="fraction"/>
+        <!--棋子红点标志占棋子半径的百分比-->
+        <attr name="flag_radius_percent" format="fraction"/>
         <attr name="board_background" format="reference"/>
         <attr name = "board_padding" format="dimension"/>
         <attr name = "chess_center_color" format = "color"/>

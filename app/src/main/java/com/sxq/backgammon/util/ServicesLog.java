@@ -72,6 +72,24 @@ public class ServicesLog {
         Log.d(tag, createLog(message));
     }
 
+    public static void d(int [][] board){
+        d(sTAG , board);
+    }
+
+    public static void d(String tag , int [][] board){
+        if (!sEnable) {
+            return;
+        }
+        getMethodNames(new Throwable().getStackTrace());
+        StringBuilder sb =  new StringBuilder();
+        for(int i = 0 ; i < board.length ; i ++){
+            sb.append("\n");
+            for(int j = 0 ; j < board[0].length ; j ++){
+                sb.append(board[i][j] + "\t");
+            }
+        }
+        Log.d(tag, createLog(sb.toString()));
+    }
     public static boolean isEnable() {
         return sEnable;
     }

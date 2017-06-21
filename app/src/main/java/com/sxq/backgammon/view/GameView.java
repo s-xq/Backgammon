@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -14,6 +15,12 @@ import android.view.SurfaceView;
 
 import com.sxq.backgammon.R;
 import com.sxq.backgammon.util.ServicesLog;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static java.util.Arrays.asList;
 
 /**
  * Created by SXQ on 2017/5/28.
@@ -34,15 +41,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      */
     private static final float DEFAULT_RADIUS_PERCENT = 0.25f;
     /**
+     * 默认棋子红点标志占棋子半径的百分比
+     */
+    private static final float DEFAULT_FLAG_RADIUS_PERCENT = 0.25F;
+
+    /**
      * 默认边界padding
      * 单位：dp
      */
-    private static final float DEFAULT_BOARD_PADDING = 10;
+    private static final float DEFAULT_BOARD_PADDING = 100;
     /**
      * 默认线的宽度
      * 单位：dp
      */
-    private static final float DEFAULT_LINE_WIDTH = 1;
+    private static final float DEFAULT_LINE_WIDTH = 5;
 
     /**
      * 默认背景
@@ -52,7 +64,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      * 默认线条颜色
      * 黑色，ARGB
      */
-    private static final int DEFAULT_LINE_COLOR = 0x00FFFFFF;
+    private static final int DEFAULT_LINE_COLOR = 0xFF000000;
     /**
      * 默认棋子中心的标志颜色
      * 红色，ARGB
@@ -62,6 +74,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private int mCloumnCount = DEFAULT_CLOUMN_COUNT;
     private int mRowCount = DEFAULT_ROW_COUNT;
     private float mRadiusPercent = DEFAULT_RADIUS_PERCENT;
+    private float mFlagRadiusPercent = DEFAULT_FLAG_RADIUS_PERCENT;
     private float mBoardPadding = DEFAULT_BOARD_PADDING;
     private float mLineWidth = DEFAULT_LINE_WIDTH;
     private int mBoardBackGround = DEFAULT_BOARD_BACKGROUND;
@@ -70,6 +83,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     private Bitmap mBlackChessBitmap = null;
     private Bitmap mWhiteChessBitmap = null;
+    private Bitmap mBackgroundBitmap = null ;
     private Paint mLinePaint;
     private Paint mFlagPaint;
 
@@ -78,7 +92,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private float mChessRadius;
     private float[] mHorizontalLines;
     private float[] mVerticalLines;
-    private int[][] mBoard;
+    private int[][] mBoard = new int[DEFAULT_ROW_COUNT][DEFAULT_CLOUMN_COUNT];
     private int mLastChessCloumn = -1;
     private int mLastChessRow = -1;
     private boolean mIsNextWhite = false;
@@ -106,6 +120,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        ServicesLog.d("onMeasure");
         int width = MeasureSpec.getSize(widthMeasureSpec);
         /**
          * 设置为正方形棋盘
@@ -118,14 +133,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN: {
+//                ServicesLog.d("onTouchEvent MotionEvent.ACTION_DOWN");
                 break;
             }
 
             case MotionEvent.ACTION_MOVE: {
+//                ServicesLog.d("onTouchEvent MotionEvent.ACTION_MOVE");
                 break;
             }
 
             case MotionEvent.ACTION_UP: {
+                ServicesLog.d("onTouchEvent MotionEvent.ACTION_UP");
                 float x = event.getX();
                 float y = event.getY();
                 int cloumn = Math.round(Math.abs(x - mBoardPadding) / mGridWidth);
@@ -165,40 +183,60 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        ServicesLog.d("surfaceCreated");
         mSurfaceHolder = holder;
         if (mUpdateViewThread == null) {
             mUpdateViewThread = new UpdateViewThread();
             mUpdateViewThread.start();
+            ServicesLog.d("开启线程");
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+        ServicesLog.d("surfaceChanged");
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        ServicesLog.d("surfaceDestroyed");
         if (mUpdateViewThread != null) {
             mUpdateViewThread.requestExit();
+            /**
+             * Surface销毁之后，重建，重新开启新线程
+             */
+            mUpdateViewThread = null;
         }
     }
 
+    @Override
+    protected Parcelable onSaveInstanceState() {
+        ServicesLog.d("onSaveInstanceState");
+        return super.onSaveInstanceState();
+    }
+
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+/*        drawLines(canvas);
+        drawChess(canvas , mBoard);*/
+    }
 
     public void draw(int[][] board) {
         mBoard = board;
         mRowCount = mBoard.length;
         mCloumnCount = mBoard[0].length;
-        for(int i = 0 ; i < mRowCount ; i ++){
-            for(int j = 0 ; j < mCloumnCount ; j ++){
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mCloumnCount; j++) {
                 Status status = Status.getStatus(mBoard[i][j]);
-                if(status == Status.LAST_BLACK || status == Status.LAST_WHITE){
-                    mLastChessRow = i ;
-                    mLastChessCloumn = j ;
-                    if(status == Status.LAST_BLACK){
-                        mIsNextWhite = true ;
-                    }else{
-                        mIsNextWhite = false ;
+                if (status == Status.LAST_BLACK || status == Status.LAST_WHITE) {
+                    mLastChessRow = i;
+                    mLastChessCloumn = j;
+                    if (status == Status.LAST_BLACK) {
+                        mIsNextWhite = true;
+                    } else {
+                        mIsNextWhite = false;
                     }
                 }
             }
@@ -210,6 +248,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     }
 
     private void init(Context context, AttributeSet attrs) {
+        ServicesLog.d("初始化");
         TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.GameView);
         mLineWidth = typedArray.getDimension(R.styleable.GameView_line_width, DEFAULT_LINE_WIDTH);
         mLineColor = typedArray.getColor(R.styleable.GameView_line_color, DEFAULT_LINE_COLOR);
@@ -218,13 +257,18 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         mRowCount = typedArray.getInteger(R.styleable.GameView_row, DEFAULT_ROW_COUNT);
         mBoardPadding = typedArray.getDimension(R.styleable.GameView_board_padding, DEFAULT_BOARD_PADDING);
         mRadiusPercent = typedArray.getFraction(R.styleable.GameView_radius_percent, 1, 1, DEFAULT_RADIUS_PERCENT);
+        mFlagRadiusPercent = typedArray.getFraction(R.styleable.GameView_flag_radius_percent, 1, 1, DEFAULT_FLAG_RADIUS_PERCENT);
         mChessCenterColor = typedArray.getColor(R.styleable.GameView_chess_center_color, DEFAULT_CHESS_CENTER_COLOR);
         typedArray.recycle();
 
 
         mBlackChessBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.chess_black);
         mWhiteChessBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.chess_white);
-        setBackgroundResource(mBoardBackGround);
+        mBackgroundBitmap = BitmapFactory.decodeResource(context.getResources() , mBoardBackGround);
+        /**
+         * ERROR 设置背景图将导致在surface异步线程中绘制的视图被该背景图覆盖，正确做法是在异步线程中绘制背景图，然后再绘制前景视图
+         */
+//        setBackgroundResource(mBoardBackGround);
 
         mLinePaint = new Paint();
         mLinePaint.setAntiAlias(true);
@@ -235,6 +279,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         mFlagPaint.setAntiAlias(true);
         mFlagPaint.setColor(mChessCenterColor);
 
+        mSurfaceHolder = getHolder();
+        mSurfaceHolder.addCallback(this);
+
+        /**
+         * ERROR 默认为false，此时onTouchEvent只会监听到MotionEvent.ACTION_DOWN
+         */
+        setClickable(true);
     }
 
     /**
@@ -252,6 +303,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      * @param canvas
      */
     private void drawLines(Canvas canvas) {
+        ServicesLog.d("画线");
         canvas.drawLines(mHorizontalLines, mLinePaint);
         canvas.drawLines(mVerticalLines, mLinePaint);
     }
@@ -272,21 +324,33 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 float left = centerC - mChessRadius;
                 float right = centerC + mChessRadius;
                 float bottom = centerR + mChessRadius;
-                RectF rectF = new RectF(top, left, right, bottom);
+                RectF rectF = new RectF(left, top, right, bottom);
                 if (status == Status.BLACK || status == Status.LAST_BLACK) {
                     canvas.drawBitmap(mBlackChessBitmap, null, rectF, null);
+//                    ServicesLog.d(String.format("画棋子，row=%d,cloumn=%d，矩形=%s", row, cloumn, rectF.toShortString()));
                 } else if (status == Status.WHITE || status == Status.LAST_WHITE) {
                     canvas.drawBitmap(mWhiteChessBitmap, null, rectF, null);
+//                    ServicesLog.d(String.format("画棋子，row=%d,cloumn=%d，矩形=%s", row, cloumn, rectF.toShortString()));
                 }
 
                 if (status == Status.LAST_BLACK || status == Status.LAST_WHITE) {
-                    canvas.drawCircle(centerC, centerR, mChessRadius, mFlagPaint);
+                    canvas.drawCircle(centerC, centerR, mChessRadius * mFlagRadiusPercent, mFlagPaint);
+//                    ServicesLog.d(String.format("画棋子，row=%d,cloumn=%d，矩形=%s", row, cloumn, rectF.toShortString()));
                 }
             }
         }
     }
 
+    /**
+     * 绘制背景图
+     *
+     * @param canvas
+     */
+    private void drawBackground(Canvas canvas){
+        canvas.drawBitmap(mBackgroundBitmap , null , new RectF(0 , 0 , getWidth() , getHeight()) ,null );
+    }
     private void calculate() {
+        ServicesLog.d("重新计算");
         mGridWidth = (getMeasuredWidth() - mBoardPadding * 2) / (mCloumnCount - 1);
         mGridHeight = (getMeasuredHeight() - mBoardPadding * 2) / (mRowCount - 1);
         mChessRadius = mRadiusPercent * mGridWidth;
@@ -297,6 +361,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             mHorizontalLines[i + 1] = i / 4 * mGridHeight + mBoardPadding;
             mHorizontalLines[i + 2] = mBoardPadding + (mCloumnCount - 1) * mGridWidth;
             mHorizontalLines[i + 3] = i / 4 * mGridHeight + mBoardPadding;
+//            ServicesLog.d(String.format("mHorizontalLines{i=%d,x0=%f,y0=%f,x1=%f,y1=%f}", i, mHorizontalLines[i], mHorizontalLines[i + 1], mHorizontalLines[i + 2], mHorizontalLines[i + 3]));
         }
 
         mVerticalLines = new float[mCloumnCount * 4];
@@ -305,6 +370,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             mVerticalLines[i + 1] = mBoardPadding;
             mVerticalLines[i + 2] = i / 4 * mGridWidth + mBoardPadding;
             mVerticalLines[i + 3] = mBoardPadding + (mRowCount - 1) * mGridHeight;
+//            ServicesLog.d(String.format("mVerticalLines{i=%d,x0=%f,y0=%f,x1=%f,y1=%f}", i, mVerticalLines[i], mVerticalLines[i + 1], mVerticalLines[i + 2], mVerticalLines[i + 3]));
         }
     }
 
@@ -376,6 +442,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 while (!mIsDone && !Thread.interrupted()) {
                     synchronized (this) {
                         while (mShouldWaitUpdate) {
+                            ServicesLog.d("等待更新视图");
                             wait();
                         }
                     }
@@ -384,11 +451,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 }
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
+                mIsDone = true;
             }
         }
 
         private void update() {
+            ServicesLog.d("更新视图");
             Canvas canvas = mSurfaceHolder.lockCanvas();
+            GameView.this.drawBackground(canvas);
             GameView.this.drawLines(canvas);
             GameView.this.drawChess(canvas, GameView.this.mBoard);
             mSurfaceHolder.unlockCanvasAndPost(canvas);
@@ -419,8 +489,15 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
          * 通知线程更新SurfaceView
          */
         public void notifyUpdate() {
-            this.mShouldWaitUpdate = false;
-            UpdateViewThread.this.notifyAll();
+            if (!mIsDone) {
+                synchronized (UpdateViewThread.this) {
+                    this.mShouldWaitUpdate = false;
+                    /**
+                     * ERROR 线程notifyAll()时需要先加锁synchronized
+                     */
+                    UpdateViewThread.this.notifyAll();
+                }
+            }
         }
 
     }
