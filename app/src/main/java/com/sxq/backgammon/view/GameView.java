@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Bundle;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -18,6 +19,7 @@ import com.sxq.backgammon.util.ServicesLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -92,6 +94,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private float mChessRadius;
     private float[] mHorizontalLines;
     private float[] mVerticalLines;
+
     private int[][] mBoard = new int[DEFAULT_ROW_COUNT][DEFAULT_CLOUMN_COUNT];
     private int mLastChessCloumn = -1;
     private int mLastChessRow = -1;
@@ -120,7 +123,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        ServicesLog.d("onMeasure");
         int width = MeasureSpec.getSize(widthMeasureSpec);
         /**
          * 设置为正方形棋盘
@@ -211,10 +213,40 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     @Override
     protected Parcelable onSaveInstanceState() {
-        ServicesLog.d("onSaveInstanceState");
-        return super.onSaveInstanceState();
+        Bundle bundle = new Bundle();
+        Parcelable superData = super.onSaveInstanceState();
+        ServicesLog.d("onSaveInstanceState:" + superData.toString());
+        bundle.putParcelable("SuperData", superData);
+        bundle.putBoolean("IsNextWhite", mIsNextWhite);
+        bundle.putInt("LastChessRow", mLastChessRow);
+        bundle.putInt("LastChessCloumn", mLastChessCloumn);
+        List<Integer> savedList = new ArrayList<>();
+        for (int i = 0; i < mBoard.length; i++) {
+            for (int j = 0; j < mBoard[0].length; j++) {
+                savedList.add(mBoard[i][j]);
+            }
+        }
+        bundle.putIntegerArrayList("ChessBoard", (ArrayList<Integer>) savedList);
+        ServicesLog.d("保存状态：" + bundle.toString());
+        return bundle;
     }
 
+    @Override
+    protected void onRestoreInstanceState(Parcelable state) {
+        ServicesLog.d("恢复状态：" + state.toString());
+        Bundle bundle = (Bundle) state;
+        Parcelable superData = bundle.getParcelable("SuperData");
+        List<Integer> savedList = bundle.getIntegerArrayList("ChessBoard");
+        mIsNextWhite = bundle.getBoolean("IsNextWhite");
+        mLastChessRow = bundle.getInt("LastChessRow");
+        mLastChessCloumn = bundle.getInt("LastChessCloumn");
+        for (int i = 0; i < mBoard.length; i++) {
+            for (int j = 0; j < mBoard[0].length; j++) {
+                mBoard[i][j] = savedList.get(i * mBoard.length + j);
+            }
+        }
+        super.onRestoreInstanceState(superData);
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
