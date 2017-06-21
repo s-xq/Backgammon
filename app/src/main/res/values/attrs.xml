@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name = "GameView">
-        <attr name = "line_width" format="dimension"/>
-        <attr name = "line_color" format="color"/>
-        <attr name = "cloumn" format="integer"/>
-        <attr name = "row" format="integer"/>
+    <declare-styleable name="GameView">
+        <attr name="line_width" format="dimension"/>
+        <attr name="line_color" format="color"/>
+        <!--胜利标识线条颜色-->
+        <attr name="win_line_color" format="color"/>
+        <attr name="column" format="integer"/>
+        <attr name="row" format="integer"/>
         <!--棋子半径长度占方格边长的百分比-->
-        <attr name = "radius_percent" format="fraction"/>
+        <attr name="radius_percent" format="fraction"/>
         <!--棋子红点标志占棋子半径的百分比-->
         <attr name="flag_radius_percent" format="fraction"/>
         <attr name="board_background" format="reference"/>
-        <attr name = "board_padding" format="dimension"/>
-        <attr name = "chess_center_color" format = "color"/>
+        <attr name="board_padding" format="dimension"/>
+        <attr name="chess_center_color" format="color"/>
     </declare-styleable>
 
 </resources>

@@ -6,22 +6,29 @@ package com.sxq.backgammon.model;
 
 public class Point {
 
-    private int mX ;
-    private int mY ;
+    private int mColumn;
+    private int mRow;
 
-    public int getmX() {
-        return mX;
+    public Point(int row, int column) {
+        mColumn = column;
+        mRow = row;
     }
 
-    public void setmX(int mX) {
-        this.mX = mX;
+    public int getColumn() {
+        return mColumn;
     }
 
-    public int getmY() {
-        return mY;
+    public void setColumn(int column) {
+        mColumn = column;
     }
 
-    public void setmY(int mY) {
-        this.mY = mY;
+    public int getRow() {
+        return mRow;
     }
+
+    public void setRow(int row) {
+        mRow = row;
+    }
+
+
 }

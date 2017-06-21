@@ -15,14 +15,12 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import com.sxq.backgammon.R;
+import com.sxq.backgammon.model.GameResult;
+import com.sxq.backgammon.util.Judge;
 import com.sxq.backgammon.util.ServicesLog;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
-
-import static java.util.Arrays.asList;
 
 /**
  * Created by SXQ on 2017/5/28.
@@ -33,7 +31,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     /**
      * 默认列数
      */
-    private static final int DEFAULT_CLOUMN_COUNT = 10;
+    private static final int DEFAULT_COLUMN_COUNT = 10;
     /**
      * 默认行数
      */
@@ -67,13 +65,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      * 黑色，ARGB
      */
     private static final int DEFAULT_LINE_COLOR = 0xFF000000;
+
+    /**
+     * 默认胜利标识线条颜色
+     * 红色，ARGB
+     */
+    private static final int DEFAULT_WIN_LINE_COLOR = 0xFFFF0000;
+
     /**
      * 默认棋子中心的标志颜色
      * 红色，ARGB
      */
     private static final int DEFAULT_CHESS_CENTER_COLOR = 0xFFFF0000;
 
-    private int mCloumnCount = DEFAULT_CLOUMN_COUNT;
+    private int mColumnCount = DEFAULT_COLUMN_COUNT;
     private int mRowCount = DEFAULT_ROW_COUNT;
     private float mRadiusPercent = DEFAULT_RADIUS_PERCENT;
     private float mFlagRadiusPercent = DEFAULT_FLAG_RADIUS_PERCENT;
@@ -81,6 +86,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private float mLineWidth = DEFAULT_LINE_WIDTH;
     private int mBoardBackGround = DEFAULT_BOARD_BACKGROUND;
     private int mLineColor = DEFAULT_LINE_COLOR;
+    private int mWinLineColor = DEFAULT_WIN_LINE_COLOR;
     private int mChessCenterColor = DEFAULT_CHESS_CENTER_COLOR;
 
     private Bitmap mBlackChessBitmap = null;
@@ -88,6 +94,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private Bitmap mBackgroundBitmap = null;
     private Paint mLinePaint;
     private Paint mFlagPaint;
+    private Paint mWinLinePaint;
 
     private float mGridWidth;
     private float mGridHeight;
@@ -95,8 +102,8 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     private float[] mHorizontalLines;
     private float[] mVerticalLines;
 
-    private int[][] mBoard = new int[DEFAULT_ROW_COUNT][DEFAULT_CLOUMN_COUNT];
-    private int mLastChessCloumn = -1;
+    private int[][] mBoard = new int[DEFAULT_ROW_COUNT][DEFAULT_COLUMN_COUNT];
+    private int mLastChessColumn = -1;
     private int mLastChessRow = -1;
     private boolean mIsNextWhite = false;
 
@@ -148,30 +155,30 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                 ServicesLog.d("onTouchEvent MotionEvent.ACTION_UP");
                 float x = event.getX();
                 float y = event.getY();
-                int cloumn = Math.round(Math.abs(x - mBoardPadding) / mGridWidth);
+                int column = Math.round(Math.abs(x - mBoardPadding) / mGridWidth);
                 int row = Math.round(Math.abs(y - mBoardPadding) / mGridHeight);
-                if (cloumn >= mCloumnCount) {
-                    cloumn = mCloumnCount - 1;
+                if (column >= mColumnCount) {
+                    column = mColumnCount - 1;
                 }
                 if (row >= mRowCount) {
                     row = mRowCount - 1;
                 }
 
-                Status status = Status.getStatus(mBoard[row][cloumn]);
+                Status status = Status.getStatus(mBoard[row][column]);
                 if (status.isEmptyField()) {
-                    if (mLastChessCloumn != -1 && mLastChessRow != -1) {
-                        if (Status.getStatus(mBoard[mLastChessRow][mLastChessCloumn]) == Status.LAST_BLACK) {
-                            mBoard[mLastChessRow][mLastChessCloumn] = Status.BLACK.ordinal();
-                        } else if (Status.getStatus(mBoard[mLastChessRow][mLastChessCloumn]) == Status.LAST_WHITE) {
-                            mBoard[mLastChessRow][mLastChessCloumn] = Status.WHITE.ordinal();
+                    if (mLastChessColumn != -1 && mLastChessRow != -1) {
+                        if (Status.getStatus(mBoard[mLastChessRow][mLastChessColumn]) == Status.LAST_BLACK) {
+                            mBoard[mLastChessRow][mLastChessColumn] = Status.BLACK.ordinal();
+                        } else if (Status.getStatus(mBoard[mLastChessRow][mLastChessColumn]) == Status.LAST_WHITE) {
+                            mBoard[mLastChessRow][mLastChessColumn] = Status.WHITE.ordinal();
                         }
                     }
                     if (mIsNextWhite) {
-                        mBoard[row][cloumn] = Status.LAST_WHITE.ordinal();
+                        mBoard[row][column] = Status.LAST_WHITE.ordinal();
                     } else {
-                        mBoard[row][cloumn] = Status.LAST_BLACK.ordinal();
+                        mBoard[row][column] = Status.LAST_BLACK.ordinal();
                     }
-                    mLastChessCloumn = cloumn;
+                    mLastChessColumn = column;
                     mLastChessRow = row;
                     mIsNextWhite = !mIsNextWhite;
                     mUpdateViewThread.notifyUpdate();
@@ -219,7 +226,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         bundle.putParcelable("SuperData", superData);
         bundle.putBoolean("IsNextWhite", mIsNextWhite);
         bundle.putInt("LastChessRow", mLastChessRow);
-        bundle.putInt("LastChessCloumn", mLastChessCloumn);
+        bundle.putInt("LastChessColumn", mLastChessColumn);
         List<Integer> savedList = new ArrayList<>();
         for (int i = 0; i < mBoard.length; i++) {
             for (int j = 0; j < mBoard[0].length; j++) {
@@ -239,7 +246,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         List<Integer> savedList = bundle.getIntegerArrayList("ChessBoard");
         mIsNextWhite = bundle.getBoolean("IsNextWhite");
         mLastChessRow = bundle.getInt("LastChessRow");
-        mLastChessCloumn = bundle.getInt("LastChessCloumn");
+        mLastChessColumn = bundle.getInt("LastChessColumn");
         for (int i = 0; i < mBoard.length; i++) {
             for (int j = 0; j < mBoard[0].length; j++) {
                 mBoard[i][j] = savedList.get(i * mBoard.length + j);
@@ -258,13 +265,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
     public void draw(int[][] board) {
         mBoard = board;
         mRowCount = mBoard.length;
-        mCloumnCount = mBoard[0].length;
+        mColumnCount = mBoard[0].length;
         for (int i = 0; i < mRowCount; i++) {
-            for (int j = 0; j < mCloumnCount; j++) {
+            for (int j = 0; j < mColumnCount; j++) {
                 Status status = Status.getStatus(mBoard[i][j]);
-                if (status == Status.LAST_BLACK || status == Status.LAST_WHITE) {
+                if (status.isFlag()) {
                     mLastChessRow = i;
-                    mLastChessCloumn = j;
+                    mLastChessColumn = j;
                     if (status == Status.LAST_BLACK) {
                         mIsNextWhite = true;
                     } else {
@@ -284,8 +291,9 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.GameView);
         mLineWidth = typedArray.getDimension(R.styleable.GameView_line_width, DEFAULT_LINE_WIDTH);
         mLineColor = typedArray.getColor(R.styleable.GameView_line_color, DEFAULT_LINE_COLOR);
+        mWinLineColor = typedArray.getColor(R.styleable.GameView_win_line_color, DEFAULT_WIN_LINE_COLOR);
         mBoardBackGround = typedArray.getResourceId(R.styleable.GameView_board_background, DEFAULT_BOARD_BACKGROUND);
-        mCloumnCount = typedArray.getInteger(R.styleable.GameView_cloumn, DEFAULT_CLOUMN_COUNT);
+        mColumnCount = typedArray.getInteger(R.styleable.GameView_column, DEFAULT_COLUMN_COUNT);
         mRowCount = typedArray.getInteger(R.styleable.GameView_row, DEFAULT_ROW_COUNT);
         mBoardPadding = typedArray.getDimension(R.styleable.GameView_board_padding, DEFAULT_BOARD_PADDING);
         mRadiusPercent = typedArray.getFraction(R.styleable.GameView_radius_percent, 1, 1, DEFAULT_RADIUS_PERCENT);
@@ -310,6 +318,11 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         mFlagPaint = new Paint();
         mFlagPaint.setAntiAlias(true);
         mFlagPaint.setColor(mChessCenterColor);
+
+        mWinLinePaint = new Paint();
+        mWinLinePaint.setAntiAlias(true);
+        mWinLinePaint.setColor(mWinLineColor);
+        mWinLinePaint.setStrokeWidth(mLineWidth);
 
         mSurfaceHolder = getHolder();
         mSurfaceHolder.addCallback(this);
@@ -347,26 +360,26 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      */
     private void drawChess(Canvas canvas, int[][] board) {
         for (int row = 0; row < board.length; row++) {
-            for (int cloumn = 0; cloumn < board[0].length; cloumn++) {
-                Status status = Status.getStatus(board[row][cloumn]);
+            for (int column = 0; column < board[0].length; column++) {
+                Status status = Status.getStatus(board[row][column]);
                 float centerR = row * mGridHeight + mBoardPadding;
-                float centerC = cloumn * mGridWidth + mBoardPadding;
+                float centerC = column * mGridWidth + mBoardPadding;
                 float top = centerR - mChessRadius;
                 float left = centerC - mChessRadius;
                 float right = centerC + mChessRadius;
                 float bottom = centerR + mChessRadius;
                 RectF rectF = new RectF(left, top, right, bottom);
-                if (status == Status.BLACK || status == Status.LAST_BLACK) {
+                if (status.isBlack()) {
                     canvas.drawBitmap(mBlackChessBitmap, null, rectF, null);
-//                    ServicesLog.d(String.format("画棋子，row=%d,cloumn=%d，矩形=%s", row, cloumn, rectF.toShortString()));
-                } else if (status == Status.WHITE || status == Status.LAST_WHITE) {
+//                    ServicesLog.d(String.format("画棋子，row=%d,column=%d，矩形=%s", row, column, rectF.toShortString()));
+                } else if (status.isWhite()) {
                     canvas.drawBitmap(mWhiteChessBitmap, null, rectF, null);
-//                    ServicesLog.d(String.format("画棋子，row=%d,cloumn=%d，矩形=%s", row, cloumn, rectF.toShortString()));
+//                    ServicesLog.d(String.format("画棋子，row=%d,column=%d，矩形=%s", row, column, rectF.toShortString()));
                 }
 
-                if (status == Status.LAST_BLACK || status == Status.LAST_WHITE) {
+                if (status.isFlag()) {
                     canvas.drawCircle(centerC, centerR, mChessRadius * mFlagRadiusPercent, mFlagPaint);
-//                    ServicesLog.d(String.format("画棋子，row=%d,cloumn=%d，矩形=%s", row, cloumn, rectF.toShortString()));
+//                    ServicesLog.d(String.format("画棋子，row=%d,column=%d，矩形=%s", row, column, rectF.toShortString()));
                 }
             }
         }
@@ -381,9 +394,17 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         canvas.drawBitmap(mBackgroundBitmap, null, new RectF(0, 0, getWidth(), getHeight()), null);
     }
 
+    private void drawWinLine(Canvas canvas, int startRow, int startColumn, int stopRow, int stopColumn) {
+        float startY = startRow * mGridHeight + mBoardPadding;
+        float startX = startColumn * mGridWidth + mBoardPadding;
+        float stopY = stopRow * mGridHeight + mBoardPadding;
+        float stopX = stopColumn * mGridWidth + mBoardPadding;
+        canvas.drawLine(startX, startY, stopX, stopY, mWinLinePaint);
+    }
+
     private void calculate() {
         ServicesLog.d("重新计算");
-        mGridWidth = (getMeasuredWidth() - mBoardPadding * 2) / (mCloumnCount - 1);
+        mGridWidth = (getMeasuredWidth() - mBoardPadding * 2) / (mColumnCount - 1);
         mGridHeight = (getMeasuredHeight() - mBoardPadding * 2) / (mRowCount - 1);
         mChessRadius = mRadiusPercent * mGridWidth;
 
@@ -391,13 +412,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         for (int i = 0; i < mRowCount * 4; i += 4) {
             mHorizontalLines[i] = mBoardPadding;
             mHorizontalLines[i + 1] = i / 4 * mGridHeight + mBoardPadding;
-            mHorizontalLines[i + 2] = mBoardPadding + (mCloumnCount - 1) * mGridWidth;
+            mHorizontalLines[i + 2] = mBoardPadding + (mColumnCount - 1) * mGridWidth;
             mHorizontalLines[i + 3] = i / 4 * mGridHeight + mBoardPadding;
 //            ServicesLog.d(String.format("mHorizontalLines{i=%d,x0=%f,y0=%f,x1=%f,y1=%f}", i, mHorizontalLines[i], mHorizontalLines[i + 1], mHorizontalLines[i + 2], mHorizontalLines[i + 3]));
         }
 
-        mVerticalLines = new float[mCloumnCount * 4];
-        for (int i = 0; i < mCloumnCount * 4; i += 4) {
+        mVerticalLines = new float[mColumnCount * 4];
+        for (int i = 0; i < mColumnCount * 4; i += 4) {
             mVerticalLines[i] = i / 4 * mGridWidth + mBoardPadding;
             mVerticalLines[i + 1] = mBoardPadding;
             mVerticalLines[i + 2] = i / 4 * mGridWidth + mBoardPadding;
@@ -414,7 +435,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
         /**
          * @param board 当前棋子格局
          */
-        void onPutChess(int[][] board);
+        void onPutChess(int[][] board, GameResult result);
     }
 
     public enum Status {
@@ -454,6 +475,18 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         public boolean isEmptyField() {
             return this == Status.NO_CHESS || this == Status.NO_CHESS_BLACK_POINT;
+        }
+
+        public boolean isBlack() {
+            return this == Status.BLACK || this == Status.LAST_BLACK;
+        }
+
+        public boolean isWhite() {
+            return this == Status.WHITE || this == Status.LAST_WHITE;
+        }
+
+        public boolean isFlag() {
+            return this == Status.LAST_BLACK || this == Status.LAST_WHITE;
         }
     }
 
@@ -500,13 +533,27 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
             GameView.this.drawBackground(canvas);
             GameView.this.drawLines(canvas);
             GameView.this.drawChess(canvas, GameView.this.mBoard);
-            mSurfaceHolder.unlockCanvasAndPost(canvas);
+            final GameResult result = Judge.judge(mBoard);
+            if (result.getResult() != GameResult.HAS_NO_RESULT) {
+                if (result.getResult() == GameResult.BLACK_WIN) {
+                    ServicesLog.d("黑子赢");
+                } else {
+                    ServicesLog.d("白子赢");
+                }
 
+                int startRow = result.getWinLine().get(0).getRow();
+                int startColumn = result.getWinLine().get(0).getColumn();
+                int stopRow = result.getWinLine().get(result.getWinLine().size() - 1).getRow();
+                int stopColumn = result.getWinLine().get(result.getWinLine().size() - 1).getColumn();
+                GameView.this.drawWinLine(canvas, startRow, startColumn, stopRow, stopColumn);
+                GameView.this.setClickable(false);
+            }
+            mSurfaceHolder.unlockCanvasAndPost(canvas);
             GameView.this.post(new Runnable() {
                 @Override
                 public void run() {
                     if (GameView.this.mOnPutChessListener != null) {
-                        GameView.this.mOnPutChessListener.onPutChess(GameView.this.mBoard);
+                        GameView.this.mOnPutChessListener.onPutChess(GameView.this.mBoard, result);
                     }
                 }
             });
