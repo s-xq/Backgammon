@@ -83,7 +83,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
     private Bitmap mBlackChessBitmap = null;
     private Bitmap mWhiteChessBitmap = null;
-    private Bitmap mBackgroundBitmap = null ;
+    private Bitmap mBackgroundBitmap = null;
     private Paint mLinePaint;
     private Paint mFlagPaint;
 
@@ -264,7 +264,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
 
         mBlackChessBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.chess_black);
         mWhiteChessBitmap = BitmapFactory.decodeResource(context.getResources(), R.mipmap.chess_white);
-        mBackgroundBitmap = BitmapFactory.decodeResource(context.getResources() , mBoardBackGround);
+        mBackgroundBitmap = BitmapFactory.decodeResource(context.getResources(), mBoardBackGround);
         /**
          * ERROR 设置背景图将导致在surface异步线程中绘制的视图被该背景图覆盖，正确做法是在异步线程中绘制背景图，然后再绘制前景视图
          */
@@ -303,7 +303,6 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      * @param canvas
      */
     private void drawLines(Canvas canvas) {
-        ServicesLog.d("画线");
         canvas.drawLines(mHorizontalLines, mLinePaint);
         canvas.drawLines(mVerticalLines, mLinePaint);
     }
@@ -346,9 +345,10 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
      *
      * @param canvas
      */
-    private void drawBackground(Canvas canvas){
-        canvas.drawBitmap(mBackgroundBitmap , null , new RectF(0 , 0 , getWidth() , getHeight()) ,null );
+    private void drawBackground(Canvas canvas) {
+        canvas.drawBitmap(mBackgroundBitmap, null, new RectF(0, 0, getWidth(), getHeight()), null);
     }
+
     private void calculate() {
         ServicesLog.d("重新计算");
         mGridWidth = (getMeasuredWidth() - mBoardPadding * 2) / (mCloumnCount - 1);
@@ -446,13 +446,20 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
                             wait();
                         }
                     }
-                    update();
-                    mShouldWaitUpdate = true;
+                    /**
+                     * ERROR 销毁Surface后导致黑屏且长时间无法响应，原因：{@link #surfaceDestroyed(SurfaceHolder)}回调后，Surface被销毁，此时渲染线程不能再去使用Surface
+                     */
+                    if (!mIsDone) {
+                        update();
+                        mShouldWaitUpdate = true;
+                    }
                 }
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
                 mIsDone = true;
+                ServicesLog.d("渲染线程结束运行");
             }
+            ServicesLog.d("渲染线程结束运行");
         }
 
         private void update() {
@@ -478,6 +485,13 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback {
          */
         public void requestExit() {
             mIsDone = true;
+            /**
+             * 此时还需要先停止阻塞
+             */
+            mShouldWaitUpdate = false;
+            synchronized (UpdateViewThread.this) {
+                UpdateViewThread.this.notifyAll();
+            }
             try {
                 join();
             } catch (InterruptedException ex) {
